@@ -49,7 +49,7 @@ export const frostFragment = /* glsl */ `
 
   float fbm(vec2 p) {
     float f = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) { f += a * snoise(p); p *= 2.02; a *= 0.5; }
+    for (int i = 0; i < 4; i++) { f += a * snoise(p); p *= 2.02; a *= 0.5; }
     return f * 0.5 + 0.5;
   }
 
@@ -82,25 +82,34 @@ export const frostFragment = /* glsl */ `
     uv -= normalize(d + 1e-5) * lens * (0.012 + uVel * 0.05) / vec2(aspect, 1.0);
     vec2 split = vec2(lens * uVel * 0.012 + 0.0008, 0.0);
 
-    // Frost dissolve mask.
-    float n = fbm(vUv * vec2(aspect, 1.0) * 2.2 + uTime * 0.03);
-    float w = 0.12;
-    float p = uProgress * (1.0 + 2.0 * w) - w;
-    float mask = smoothstep(n - w, n + w, p);
-    float edge = 1.0 - abs(mask * 2.0 - 1.0);
-    edge = pow(edge, 1.5);
+    // Frost dissolve. All the expensive noise only runs while a transition is in progress
+    // (uProgress is a uniform, so these branches are coherent and effectively free when idle).
+    vec3 col;
+    if (uProgress <= 0.0) {
+      col = sampleRGB(uTex0, cover(uv, uRes, uImg0), split);
+    } else {
+      float n = fbm(vUv * vec2(aspect, 1.0) * 2.2 + uTime * 0.03);
+      float w = 0.12;
+      float p = uProgress * (1.0 + 2.0 * w) - w;
+      float mask = smoothstep(n - w, n + w, p);
+      float edge = pow(1.0 - abs(mask * 2.0 - 1.0), 1.5);
 
-    // Icy refraction along the edge.
-    vec2 refr = vec2(snoise(vUv * 18.0 + uTime * 0.2), snoise(vUv * 18.0 - uTime * 0.2)) * 0.018 * edge;
+      vec2 refr = vec2(0.0);
+      if (edge > 0.001) {
+        // Icy refraction along the edge.
+        refr = vec2(snoise(vUv * 18.0 + uTime * 0.2), snoise(vUv * 18.0 - uTime * 0.2)) * 0.018 * edge;
+      }
+      vec3 a = mask < 0.999 ? sampleRGB(uTex0, cover(uv + refr, uRes, uImg0), split) : vec3(0.0);
+      vec3 b = mask > 0.001 ? sampleRGB(uTex1, cover(uv - refr, uRes, uImg1), split) : vec3(0.0);
+      col = mix(a, b, mask);
 
-    vec3 a = sampleRGB(uTex0, cover(uv + refr, uRes, uImg0), split);
-    vec3 b = sampleRGB(uTex1, cover(uv - refr, uRes, uImg1), split);
-    vec3 col = mix(a, b, mask);
-
-    // Frost bloom: brighten + cool-tint the crystal edge.
-    float crystals = smoothstep(0.55, 1.0, fbm(vUv * vec2(aspect, 1.0) * 14.0));
-    col = mix(col, uFrost * 1.15, edge * (0.35 + 0.45 * crystals));
-    col += edge * 0.08;
+      if (edge > 0.001) {
+        // Frost bloom: brighten + cool-tint the crystal edge.
+        float crystals = smoothstep(0.55, 1.0, fbm(vUv * vec2(aspect, 1.0) * 14.0));
+        col = mix(col, uFrost * 1.15, edge * (0.35 + 0.45 * crystals));
+        col += edge * 0.08;
+      }
+    }
 
     // Editorial grade: slight desaturation, soft vignette, darker base for legible type.
     float l = dot(col, vec3(0.2126, 0.7152, 0.0722));

@@ -198,7 +198,8 @@ export default function HeroCanvas(props: Props) {
     <div ref={wrap} className="absolute inset-0">
       <Canvas
         flat
-        dpr={[1, 1.75]}
+        // A soft photographic image doesn't need full retina resolution; this keeps the fragment cost down.
+        dpr={[1, 1.25]}
         frameloop={visible ? "always" : "never"}
         gl={{ antialias: false, alpha: false, powerPreference: "high-performance" }}
         camera={{ position: [0, 0, 1] }}

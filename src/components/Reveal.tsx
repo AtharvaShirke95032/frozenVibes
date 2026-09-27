@@ -31,7 +31,7 @@ export function RevealText({ children, as = "h2", className, delay = 0, stagger 
       {words.map((word, i) => (
         <span key={i} aria-hidden className="inline-block overflow-hidden pb-[0.2em] -mb-[0.2em] align-top">
           <motion.span
-            className="inline-block will-change-transform"
+            className="inline-block"
             initial={{ y: "110%", rotate: 4 }}
             animate={show ? { y: "0%", rotate: 0 } : undefined}
             transition={{ duration: 1.1, ease: EXPO, delay: delay + i * stagger }}
@@ -80,9 +80,31 @@ export function Photo({ image, alt, sizes = "100vw", className = "", aspect, par
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "0px 0px -8% 0px" });
   const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], [`-${parallax}%`, `${parallax}%`]);
   const shown = !reveal || inView;
+
+  const picture = (
+    <motion.div
+      className="absolute inset-0"
+      style={{ backgroundImage: `url(${image.blur})`, backgroundSize: "cover", backgroundPosition: "center" }}
+      initial={reveal ? { scale: 1.25 } : false}
+      animate={shown ? { scale: 1 } : undefined}
+      transition={{ duration: 1.6, ease: EXPO }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`${image.src}-${image.widths[Math.min(1, image.widths.length - 1)]}.webp`}
+        srcSet={srcSet(image)}
+        sizes={sizes}
+        alt={alt}
+        width={image.w}
+        height={image.h}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        className="h-full w-full object-cover"
+      />
+    </motion.div>
+  );
 
   return (
     <div ref={ref} className={`relative overflow-hidden ${className}`} style={{ aspectRatio: aspect ?? `${image.w} / ${image.h}` }}>
@@ -92,36 +114,25 @@ export function Photo({ image, alt, sizes = "100vw", className = "", aspect, par
         animate={shown ? { clipPath: "inset(0% 0% 0% 0%)" } : undefined}
         transition={{ duration: 1.3, ease: [0.76, 0, 0.24, 1] }}
       >
-        <motion.div
-          className="absolute inset-0"
-          style={{
-            y: parallax && !reduce ? y : 0,
-            scale: parallax && !reduce ? 1 + (parallax * 2) / 100 : 1,
-          }}
-        >
-          <motion.div
-            className="absolute inset-0"
-            style={{ backgroundImage: `url(${image.blur})`, backgroundSize: "cover", backgroundPosition: "center" }}
-            initial={reveal ? { scale: 1.25 } : false}
-            animate={shown ? { scale: 1 } : undefined}
-            transition={{ duration: 1.6, ease: EXPO }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`${image.src}-${image.widths[Math.min(1, image.widths.length - 1)]}.webp`}
-              srcSet={srcSet(image)}
-              sizes={sizes}
-              alt={alt}
-              width={image.w}
-              height={image.h}
-              loading={priority ? "eager" : "lazy"}
-              fetchPriority={priority ? "high" : "auto"}
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-          </motion.div>
-        </motion.div>
+        {parallax > 0 && !reduce ? (
+          <Parallax target={ref} amount={parallax}>
+            {picture}
+          </Parallax>
+        ) : (
+          picture
+        )}
       </motion.div>
     </div>
+  );
+}
+
+/** Scroll-linked drift. Only mounted when needed, so plain photos don't each add a scroll listener. */
+function Parallax({ target, amount, children }: { target: React.RefObject<HTMLDivElement | null>; amount: number; children: React.ReactNode }) {
+  const { scrollYProgress } = useScroll({ target, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], [`-${amount}%`, `${amount}%`]);
+  return (
+    <motion.div className="absolute inset-0" style={{ y, scale: 1 + (amount * 2) / 100 }}>
+      {children}
+    </motion.div>
   );
 }

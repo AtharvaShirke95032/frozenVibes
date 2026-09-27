@@ -14,8 +14,10 @@ export default function Cursor() {
   const [down, setDown] = useState(false);
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
-  const sx = useSpring(x, { stiffness: 500, damping: 40, mass: 0.4 });
-  const sy = useSpring(y, { stiffness: 500, damping: 40, mass: 0.4 });
+  // Very stiff, critically damped spring: tracks the pointer almost 1:1 with just a hint of smoothing.
+  const spring = { stiffness: 2200, damping: 90, mass: 0.12 };
+  const sx = useSpring(x, spring);
+  const sy = useSpring(y, spring);
 
   useEffect(() => {
     const mq = window.matchMedia("(pointer: fine) and (prefers-reduced-motion: no-preference)");
@@ -30,13 +32,16 @@ export default function Cursor() {
 
   useEffect(() => {
     if (!enabled) return;
-    // Re-read on every move too, so elements that change their data-cursor while hovered (e.g. the WebGL ring) update.
+    // Re-read on move only for elements whose data-cursor changes while hovered (e.g. the WebGL ring canvas);
+    // everything else is handled once per element by pointerover.
+    let lastTarget: EventTarget | null = null;
     const move = (e: PointerEvent) => {
       x.set(e.clientX);
       y.set(e.clientY);
-      over(e);
+      if (e.target !== lastTarget || (e.target as Element).tagName === "CANVAS") over(e);
     };
     const over = (e: PointerEvent) => {
+      lastTarget = e.target;
       const el = e.target as HTMLElement | null;
       const labelled = el?.closest<HTMLElement>("[data-cursor]");
       setLabel(labelled?.dataset.cursor || null);
@@ -60,29 +65,32 @@ export default function Cursor() {
 
   const size = label ? 88 : hoverLink ? 36 : 8;
 
+  // Over media and links the cursor becomes a black & white lens (backdrop grayscale) instead of
+  // inverting colours; at rest it's a small white dot with a hairline ring, visible on light and dark.
+  const lens = !!label || hoverLink;
+
   return (
-    <motion.div
-      aria-hidden
-      className="pointer-events-none fixed left-0 top-0 z-[120] mix-blend-difference"
-      style={{ x: sx, y: sy }}
-    >
+    <motion.div aria-hidden className="pointer-events-none fixed left-0 top-0 z-[120]" style={{ x: sx, y: sy }}>
       <motion.div
-        className="flex items-center justify-center rounded-full bg-white text-black"
+        className={`flex items-center justify-center rounded-full text-white ${
+          lens ? "backdrop-grayscale backdrop-contrast-[1.1]" : ""
+        }`}
         animate={{
           width: size,
           height: size,
           x: -size / 2,
           y: -size / 2,
           scale: down ? 0.85 : 1,
-          backgroundColor: hoverLink && !label ? "rgba(255,255,255,0)" : "rgba(255,255,255,1)",
-          borderWidth: hoverLink && !label ? 1 : 0,
+          backgroundColor: lens ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,1)",
+          boxShadow: lens
+            ? "inset 0 0 0 1px rgba(255,255,255,0.8), 0 0 0 1px rgba(17,17,17,0.35)"
+            : "inset 0 0 0 0px rgba(255,255,255,0), 0 0 0 1px rgba(17,17,17,0.45)",
         }}
-        style={{ borderColor: "white", borderStyle: "solid" }}
         transition={{ type: "spring", stiffness: 350, damping: 28 }}
       >
         {label && (
           <motion.span
-            className="label text-[10px]"
+            className="label text-[10px] [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
             initial={{ opacity: 0, scale: 0.6 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.05 }}

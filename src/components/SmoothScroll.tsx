@@ -14,7 +14,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const instance = new Lenis({ autoRaf: true, lerp: 0.085, wheelMultiplier: 1 });
+    const instance = new Lenis({ autoRaf: true, lerp: 0.11, wheelMultiplier: 1 });
     // Lenis is an external, browser-only instance; exposing it through state lets consumers re-render once it exists.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLenis(instance);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useSpring, useTransform } from "motion/react";
+import { motion, useScroll, useTransform } from "motion/react";
 import { Link } from "@/components/PageTransition";
 import { srcSet } from "@/lib/media";
 import type { Story } from "@/data/stories";
@@ -35,9 +35,9 @@ export default function HorizontalStories({ stories }: { stories: Story[] }) {
   }, [reduce]);
 
   const { scrollYProgress } = useScroll({ target: section, offset: ["start start", "end end"] });
-  const smooth = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
-  const x = useTransform(smooth, [0, 1], [0, -distance]);
-  const bar = useTransform(smooth, [0, 1], ["0%", "100%"]);
+  // Lenis already smooths the scroll, so map it directly — an extra spring here only adds lag.
+  const x = useTransform(scrollYProgress, [0, 1], [0, -distance]);
+  const bar = useTransform(scrollYProgress, [0, 1], [0, 1]);
 
   return (
     <section
@@ -101,7 +101,7 @@ export default function HorizontalStories({ stories }: { stories: Story[] }) {
         {pinned && (
           <div className="gutter mt-10">
             <div className="h-px w-full bg-line relative overflow-hidden">
-              <motion.div className="absolute inset-y-0 left-0 bg-ink" style={{ width: bar }} />
+              <motion.div className="absolute inset-0 origin-left bg-ink" style={{ scaleX: bar }} />
             </div>
           </div>
         )}

@@ -167,7 +167,7 @@ export default function StoriesRing(props: Omit<Props, "setCursor">) {
   return (
     <div ref={wrap} className="absolute inset-0 touch-pan-y">
       <Canvas
-        dpr={[1, 1.75]}
+        dpr={[1, 1.5]}
         frameloop={visible ? "always" : "never"}
         camera={{ position: [0, 0, RADIUS + 8], fov: 32 }}
         gl={{ antialias: true, alpha: true }}

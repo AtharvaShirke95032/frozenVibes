@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, type PanInfo } from "motion/react";
 import { Photo } from "@/components/Reveal";
 import { useLenis } from "@/components/SmoothScroll";
@@ -12,14 +12,31 @@ const EXPO = [0.19, 1, 0.22, 1] as const;
  * Editorial gallery: landscape frames span the full row, portraits pair up side by side,
  * with a rhythm of offsets. Click any frame to open the lightbox.
  */
+const ROWS_PER_BATCH = 8;
+
 export default function Gallery({ images, title }: { images: Img[]; title: string }) {
   const [open, setOpen] = useState<number | null>(null);
+  const [visibleRows, setVisibleRows] = useState(ROWS_PER_BATCH);
+  const sentinel = useRef<HTMLDivElement>(null);
   const rows = buildRows(images);
+  const hasMore = visibleRows < rows.length;
+
+  // Render big galleries progressively: the next batch mounts well before it scrolls into view.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      ([e]) => e.isIntersecting && setVisibleRows((n) => n + ROWS_PER_BATCH),
+      { rootMargin: "1600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visibleRows]);
 
   return (
     <>
       <div className="flex flex-col gap-4 md:gap-8">
-        {rows.map((row, r) => (
+        {rows.slice(0, visibleRows).map((row, r) => (
           <div
             key={r}
             className={`grid gap-4 md:gap-8 ${
@@ -43,13 +60,13 @@ export default function Gallery({ images, title }: { images: Img[]; title: strin
                   image={image}
                   alt={`${title} — photo ${index + 1}`}
                   sizes={row.length === 1 ? "100vw" : "50vw"}
-                  parallax={row.length === 1 ? 6 : 0}
                 />
               </button>
             ))}
           </div>
         ))}
       </div>
+      {hasMore && <div ref={sentinel} className="h-px" aria-hidden />}
       <Lightbox images={images} index={open} setIndex={setOpen} title={title} />
     </>
   );

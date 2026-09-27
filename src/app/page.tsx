@@ -90,15 +90,13 @@ export default function Home() {
         </div>
         <div className="grid gap-20 md:grid-cols-2 md:gap-10">
           {team.map((p, i) => (
-            <article key={p.name} className={i === 1 ? "md:mt-40" : ""}>
-              <div className="w-3/4 max-w-md">
+            <article key={p.name} className={`max-w-md ${i === 1 ? "md:mt-40" : ""}`}>
+              <div className="w-3/4">
                 <Photo image={img(p.image)} alt={p.name} aspect="1/1" className="rounded-full [&_img]:scale-110" sizes="(min-width: 768px) 30vw, 75vw" />
               </div>
-              <div className="mt-8 flex items-baseline justify-between gap-4">
-                <h3 className="display text-4xl md:text-5xl">{p.name}</h3>
-                <span className="label text-mute shrink-0">{p.role}</span>
-              </div>
-              <p className="mt-4 max-w-md text-mute leading-relaxed">{p.bio}</p>
+              <p className="label text-mute mt-8">{p.role}</p>
+              <h3 className="display text-4xl md:text-5xl mt-2">{p.name}</h3>
+              <p className="mt-4 text-mute leading-relaxed">{p.bio}</p>
             </article>
           ))}
         </div>
