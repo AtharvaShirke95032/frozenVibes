@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f5f3ef;
+  --color-paper-2: #ebe8e2;
+  --color-ink: #111111;
+  --color-ink-2: #1b1b1b;
+  --color-mute: #6f6c66;
+  --color-frost: #c9d6df;
+  --color-line: rgb(17 17 17 / 0.12);
+
+  --font-display: var(--font-instrument-serif), "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --ease-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--color-paper);
+    font-family: var(--font-sans);
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  :focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 4px;
+  }
+
+  img {
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+}
+
+@layer utilities {
+  .label {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 0.92;
+  }
+
+  .gutter {
+    padding-inline: clamp(1rem, 3.2vw, 3rem);
+  }
+
+  .hairline {
+    border-color: var(--color-line);
+  }
+}
+
+/* Lenis recommended styles */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Hide the native cursor only where the custom cursor is active (fine pointers). */
+@media (pointer: fine) {
+  html.has-cursor,
+  html.has-cursor a,
+  html.has-cursor button,
+  html.has-cursor [role="button"],
+  html.has-cursor label {
+    cursor: none;
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-track {
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Film grain overlay, very subtle. */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
