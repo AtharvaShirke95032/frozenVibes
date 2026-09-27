@@ -8,6 +8,7 @@ import { img } from "@/lib/media";
 
 export const metadata: Metadata = {
   title: "About",
+  alternates: { canonical: "/about/" },
   description:
     "Frozen Vibes brings together photography, engineering and visual arts to capture authentic wedding stories — founded by Nikhil Malusare and Rahul Gosavi.",
 };

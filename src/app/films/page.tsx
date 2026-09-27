@@ -5,6 +5,7 @@ import { films } from "@/data/films";
 
 export const metadata: Metadata = {
   title: "Films",
+  alternates: { canonical: "/films/" },
   description: "Cinematic wedding and pre-wedding films by Frozen Vibes — Goa, Jodhpur, Pune, Dubai, Phuket, Kenya and more.",
 };
 

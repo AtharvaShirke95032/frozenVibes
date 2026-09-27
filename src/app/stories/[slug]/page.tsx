@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: PageProps<"/stories/[slug]">)
   if (!story) return {};
   return {
     title: story.couple,
+    alternates: { canonical: `/stories/${story.slug}/` },
     description: `${story.couple}${story.place ? ` — ${story.place}` : ""}. A wedding story photographed by Frozen Vibes.`,
     openGraph: { images: [{ url: variant(story.cover, 1280) }] },
   };

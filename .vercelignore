@@ -1,0 +1,4 @@
+# Build-time only needs src/ and public/ — skip the 350 MB of original photos and extraction tooling.
+source/
+scripts/
+out/

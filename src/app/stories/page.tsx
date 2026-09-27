@@ -8,6 +8,7 @@ import { variant } from "@/lib/media";
 
 export const metadata: Metadata = {
   title: "Stories",
+  alternates: { canonical: "/stories/" },
   description: "Wedding stories photographed by Frozen Vibes — from Mumbai and Goa to Jodhpur, Phuket and Kenya.",
 };
 

@@ -6,6 +6,7 @@ import { img } from "@/lib/media";
 
 export const metadata: Metadata = {
   title: "Contact",
+  alternates: { canonical: "/contact/" },
   description: "Tell us about your wedding. Frozen Vibes — Mumbai & India. hello@frozenvibes.in · +91 77095 55551.",
 };
 

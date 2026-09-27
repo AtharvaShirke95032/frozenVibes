@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Hero, { type HeroSlide } from "@/components/Hero";
 import HorizontalStories from "@/components/HorizontalStories";
 import Marquee from "@/components/Marquee";
@@ -11,6 +12,10 @@ import { services, site, team, testimonials } from "@/data/site";
 import { stories } from "@/data/stories";
 import { img, variant } from "@/lib/media";
 import { heroSlides } from "@/data/home";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   const slides: HeroSlide[] = heroSlides.map((s) => {
