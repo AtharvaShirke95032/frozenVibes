@@ -4,8 +4,7 @@
    which is the intended react-three-fiber pattern. Components here opt out of the React Compiler. */
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { frostFragment, frostVertex, snowFragment, snowVertex } from "./frostShader";
 
@@ -23,22 +22,48 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t 
 
 function FrostPlane({ images, interval = 6, play, onSlide, onReady }: Props) {
   "use no memo";
-  const textures = useTexture(images);
-  const { size, gl } = useThree();
+  // ImageBitmapLoader decodes off the main thread; an <img>-backed texture would decode synchronously at GPU upload.
+  const bitmaps = useLoader(THREE.ImageBitmapLoader, images, (l) => l.setOptions({ imageOrientation: "flipY" }));
+  const textures = useMemo(
+    () =>
+      bitmaps.map((b) => {
+        const t = new THREE.Texture(b);
+        t.flipY = false; // already flipped at decode
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.minFilter = THREE.LinearFilter;
+        t.generateMipmaps = false;
+        t.needsUpdate = true;
+        return t;
+      }),
+    [bitmaps],
+  );
+  const { size, gl, scene, camera } = useThree();
   const mouse = useRef(new THREE.Vector2(0.5, 0.5));
   const target = useRef(new THREE.Vector2(0.5, 0.5));
-  const state = useRef({ index: 0, next: 1, clock: 0, transitioning: false, t: 0, intro: 0, vel: 0 });
+  const state = useRef({ index: 0, next: 1, clock: 0, transitioning: false, t: 0, vel: 0 });
 
+  // The scene starts hidden (see onCreated). Upload one texture per frame and compile shaders in the
+  // background so no single frame blocks the main thread, then show it.
   useEffect(() => {
-    textures.forEach((t) => {
-      t.colorSpace = THREE.SRGBColorSpace;
-      t.minFilter = THREE.LinearFilter;
-      t.generateMipmaps = false;
-      t.needsUpdate = true;
-      gl.initTexture(t);
-    });
-    onReady?.();
-  }, [textures, gl, onReady]);
+    let cancelled = false;
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+    (async () => {
+      for (const t of textures) {
+        gl.initTexture(t);
+        await frame();
+        if (cancelled) return;
+      }
+      await gl.compileAsync(scene, camera);
+      if (cancelled) return;
+      scene.visible = true;
+      await frame();
+      await frame();
+      if (!cancelled) onReady?.();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [textures, gl, scene, camera, onReady]);
 
   const dims = (t: THREE.Texture) => {
     const img = t.image as { width: number; height: number };
@@ -62,7 +87,6 @@ function FrostPlane({ images, interval = 6, play, onSlide, onReady }: Props) {
           uVel: { value: 0 },
           uProgress: { value: 0 },
           uTime: { value: 0 },
-          uIntro: { value: 0 },
           uFrost: { value: new THREE.Color("#c9d6df") },
         },
       }),
@@ -84,9 +108,6 @@ function FrostPlane({ images, interval = 6, play, onSlide, onReady }: Props) {
     const s = state.current;
     const u = material.uniforms;
     u.uTime.value += delta;
-
-    if (play) s.intro = Math.min(1, s.intro + delta / 2.2);
-    u.uIntro.value = easeInOut(s.intro);
 
     const prev = mouse.current.clone();
     mouse.current.lerp(target.current, 1 - Math.pow(0.001, delta));
@@ -200,9 +221,14 @@ export default function HeroCanvas(props: Props) {
         flat
         // A soft photographic image doesn't need full retina resolution; this keeps the fragment cost down.
         dpr={[1, 1.25]}
+        // Measure layout size, not the transformed rect: the hero's intro zoom and parallax would otherwise resize the canvas on scroll.
+        resize={{ scroll: false, offsetSize: true }}
         frameloop={visible ? "always" : "never"}
         gl={{ antialias: false, alpha: false, powerPreference: "high-performance" }}
         camera={{ position: [0, 0, 1] }}
+        onCreated={({ scene }) => {
+          scene.visible = false;
+        }}
       >
         <Suspense fallback={null}>
           <FrostPlane {...props} />

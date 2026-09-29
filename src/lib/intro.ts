@@ -22,3 +22,22 @@ export function useIntroDone() {
     () => false,
   );
 }
+
+// The WebGL hero registers itself so the preloader can hold until its textures are uploaded
+// and shaders compiled — otherwise that main-thread work lands right as the page is revealed.
+let heroPending: Promise<void> | null = null;
+let resolveHero: (() => void) | null = null;
+let heroDone = false;
+
+export function expectHero() {
+  if (heroPending || heroDone) return;
+  heroPending = new Promise<void>((r) => (resolveHero = r));
+}
+
+export function markHeroReady() {
+  heroDone = true;
+  resolveHero?.();
+}
+
+/** Resolves once a registered hero is ready (immediately if no hero is on the page). */
+export const heroReady = () => heroPending ?? Promise.resolve();

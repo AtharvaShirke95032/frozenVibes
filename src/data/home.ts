@@ -1,6 +1,5 @@
 // Hero slideshow (WebGL frost dissolve). Keys are paths under source/images.
 export const heroSlides = [
-  { key: "home/DJI_20240901054105_0030_D-Enhanced-NR-1-1-scaled.jpg", caption: "Vows by the sea" },
   { key: "home/FRV_2657-1-scaled.jpg", caption: "Among the vines" },
   { key: "home/DSC_7649-1-scaled.jpg", caption: "A sunset mandap" },
   { key: "home/FRV_8430-2-copy-scaled.jpg", caption: "Under the old banyan" },

@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, animate, motion } from "motion/react";
-import { markIntroDone } from "@/lib/intro";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { heroReady, markIntroDone } from "@/lib/intro";
 import { useReducedMotion } from "@/lib/useMedia";
 
 const letters = "frozenVibes".split("");
 const MAX_WAIT = 6000;
+/** Extra time allowed for the WebGL hero to finish uploading textures once the page has loaded. */
+const HERO_WAIT = 4000;
+/** The intro always runs at least this long so the wordmark animation can play. */
+const MIN_DURATION = 1800;
+/** Where the count drifts to while still waiting on assets. */
+const CREEP = 92;
 
 /** Resolves once fonts and the page's eager assets (incl. the hero photo) have loaded, capped at MAX_WAIT. */
 function pageReady() {
@@ -22,7 +28,8 @@ function pageReady() {
 export default function Preloader() {
   const reduce = useReducedMotion();
   const [visible, setVisible] = useState(true);
-  const [count, setCount] = useState(0);
+  const countRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (reduce) {
@@ -34,26 +41,38 @@ export default function Preloader() {
     }
 
     let cancelled = false;
+    let ready = false;
     document.documentElement.style.overflow = "hidden";
-    const onUpdate = (v: number) => setCount(Math.round(v));
+    pageReady()
+      .then(() => Promise.race([heroReady(), new Promise<void>((r) => setTimeout(r, HERO_WAIT))]))
+      .then(() => (ready = true));
 
-    // Count to 90 while loading, then finish once the page is actually ready.
-    const first = animate(0, 90, { duration: 1.8, ease: [0.33, 1, 0.68, 1], onUpdate });
-    let last: ReturnType<typeof animate> | undefined;
-    Promise.all([first, pageReady()]).then(() => {
-      if (cancelled) return;
-      last = animate(90, 100, {
-        duration: 0.5,
-        ease: "easeOut",
-        onUpdate,
-        onComplete: () => setTimeout(() => !cancelled && setVisible(false), 300),
-      });
-    });
+    // One continuous rAF-driven count written straight to the DOM (no React renders): it creeps toward
+    // CREEP while loading and eases into 100 once ready, so it never visibly stops and restarts.
+    const start = performance.now();
+    let last = start;
+    let value = 0;
+    let raf = 0;
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, 50) / 1000;
+      last = now;
+      const t = (now - start) / 1000;
+      const finishing = ready && now - start >= MIN_DURATION;
+      const target = finishing ? 100 : CREEP * (1 - Math.exp(-t / 1.1));
+      value = Math.max(value, value + (target - value) * (1 - Math.exp(-dt * (finishing ? 5 : 6))));
+      if (finishing && value > 99.6) value = 100;
+
+      if (countRef.current) countRef.current.textContent = String(Math.round(value));
+      if (barRef.current) barRef.current.style.transform = `scaleX(${value / 100})`;
+
+      if (value < 100) raf = requestAnimationFrame(tick);
+      else setTimeout(() => !cancelled && setVisible(false), 300);
+    };
+    raf = requestAnimationFrame(tick);
 
     return () => {
       cancelled = true;
-      first.stop();
-      last?.stop();
+      cancelAnimationFrame(raf);
     };
   }, [reduce]);
 
@@ -100,9 +119,11 @@ export default function Preloader() {
 
           <div className="flex items-end justify-between">
             <div className="h-px flex-1 bg-paper/15 mr-6 mb-3 relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 bg-frost" style={{ width: `${count}%` }} />
+              <div ref={barRef} className="absolute inset-0 origin-left bg-frost" style={{ transform: "scaleX(0)" }} />
             </div>
-            <span className="display text-6xl md:text-8xl tabular-nums w-[3ch] text-right">{count}</span>
+            <span ref={countRef} className="display text-6xl md:text-8xl tabular-nums w-[3ch] text-right">
+              0
+            </span>
           </div>
         </motion.div>
       )}

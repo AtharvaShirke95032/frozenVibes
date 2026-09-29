@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "motion/react";
 import { RevealText } from "@/components/Reveal";
-import { useIntroDone } from "@/lib/intro";
+import { expectHero, markHeroReady, useIntroDone } from "@/lib/intro";
 import { srcSet, type Img } from "@/lib/media";
 import { useWebGL2, useReducedMotion } from "@/lib/useMedia";
 
@@ -23,27 +23,42 @@ export default function Hero({ slides }: { slides: HeroSlide[] }) {
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const fade = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
-  const onReady = useCallback(() => setReady(true), []);
+  useEffect(() => {
+    if (webgl) expectHero();
+  }, [webgl]);
+
+  const onReady = useCallback(() => {
+    setReady(true);
+    markHeroReady();
+  }, []);
   const first = slides[0];
 
   return (
     <section ref={ref} className="relative h-[100svh] min-h-[560px] w-full overflow-hidden bg-ink text-paper">
       <motion.div className="absolute inset-0" style={{ y: reduce ? 0 : y }}>
-        {/* Static first frame: LCP image and no-WebGL / reduced-motion fallback. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`${first.image.src}-1280.webp`}
-          srcSet={srcSet(first.image)}
-          sizes="100vw"
-          alt=""
-          fetchPriority="high"
-          className={`absolute inset-0 h-full w-full object-cover brightness-[0.72] transition-opacity duration-1000 ${ready ? "opacity-0" : "opacity-100"}`}
-        />
-        {webgl && (
-          <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: ready ? 1 : 0 }} transition={{ duration: 1.2 }}>
-            <HeroCanvas images={slides.map((s) => s.texture)} play={introDone} onSlide={setSlide} onReady={onReady} />
-          </motion.div>
-        )}
+        {/* Intro zoom-out, applied to photo and canvas together so swapping between them never jumps. */}
+        <motion.div
+          className="absolute inset-0"
+          initial={{ scale: 1.12 }}
+          animate={introDone || reduce ? { scale: 1 } : undefined}
+          transition={{ duration: 2.2, ease: [0.65, 0, 0.35, 1] }}
+        >
+          {/* Static first frame: LCP image and no-WebGL / reduced-motion fallback. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`${first.image.src}-1280.webp`}
+            srcSet={srcSet(first.image)}
+            sizes="100vw"
+            alt=""
+            fetchPriority="high"
+            className={`absolute inset-0 h-full w-full object-cover brightness-[0.72] transition-opacity duration-1000 ${ready ? "opacity-0" : "opacity-100"}`}
+          />
+          {webgl && (
+            <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: ready ? 1 : 0 }} transition={{ duration: 1.2 }}>
+              <HeroCanvas images={slides.map((s) => s.texture)} play={introDone} onSlide={setSlide} onReady={onReady} />
+            </motion.div>
+          )}
+        </motion.div>
       </motion.div>
 
       <motion.div className="relative z-10 flex h-full flex-col justify-end gutter pb-8 md:pb-10" style={{ opacity: reduce ? 1 : fade }}>

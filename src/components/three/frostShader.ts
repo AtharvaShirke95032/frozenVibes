@@ -19,7 +19,6 @@ export const frostFragment = /* glsl */ `
   uniform float uVel;
   uniform float uProgress;
   uniform float uTime;
-  uniform float uIntro;
   uniform vec3 uFrost;
   varying vec2 vUv;
 
@@ -72,8 +71,8 @@ export const frostFragment = /* glsl */ `
     vec2 uv = vUv;
     float aspect = uRes.x / uRes.y;
 
-    // Slow "breathing" zoom + intro zoom-out.
-    float zoom = 1.0 - 0.025 * sin(uTime * 0.15) - 0.12 * (1.0 - uIntro);
+    // Slow "breathing" zoom.
+    float zoom = 1.0 - 0.025 * sin(uTime * 0.15);
     uv = (uv - 0.5) * zoom + 0.5;
 
     // Pointer lens: push pixels away from the cursor, stronger when moving fast.
@@ -117,9 +116,6 @@ export const frostFragment = /* glsl */ `
     float vig = smoothstep(1.25, 0.35, length((vUv - 0.5) * vec2(aspect * 0.8, 1.0)));
     col *= mix(0.72, 1.0, vig);
     col *= mix(0.62, 1.0, smoothstep(0.0, 0.45, vUv.y));
-
-    // Intro: fade up from ink.
-    col = mix(vec3(0.067), col, uIntro);
 
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>

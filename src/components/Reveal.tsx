@@ -32,7 +32,8 @@ export function RevealText({ children, as = "h2", className, delay = 0, stagger 
         <span key={i} aria-hidden className="inline-block overflow-hidden pb-[0.2em] -mb-[0.2em] align-top">
           <motion.span
             className="inline-block"
-            initial={{ y: "110%", rotate: 4 }}
+            // Far enough to clear the mask's bottom padding even on tight (<1) line-heights.
+            initial={{ y: "150%", rotate: 4 }}
             animate={show ? { y: "0%", rotate: 0 } : undefined}
             transition={{ duration: 1.1, ease: EXPO, delay: delay + i * stagger }}
           >
